@@ -98,19 +98,8 @@ background: linear-gradient(90deg, var(--surface-gradient-primary-start, #33D4FF
         img{
             max-width: 20%;
         }
-        
-        .forgot-password-link {
-            text-align: center;
-            font-size: 0.75rem;
-            margin-top: 1.25rem;
+
+        footer {
+            font-size: 12px;
         }
-        .forgot-password-link a {
-            color: #9ca3af;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        .forgot-password-link a:hover {
-            color: #ffffff;
-            text-decoration: underline;
-        }
-                
+      
