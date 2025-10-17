@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Manager</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+     <link rel="stylesheet" href="./style-index.css" type="text/css">
+     <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div>
+                <h1>Applications</h1>
+                <p>Review, approve, or reject pending applications.</p>
+            </div>
+            <button id="logout-btn">Logout</button>
+        </header>
+
+        <div class="search-container">
+            <input type="text" id="search-bar" placeholder="Search by name...">
+        </div>
+
+        <div class="filters">
+            <button data-status="pending" class="filter-btn filter-btn-active">Pending</button>
+            <button data-status="approved" class="filter-btn">Approved</button>
+            <button data-status="rejected" class="filter-btn">Rejected</button>
+        </div>
+        
+        <div id="loader">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle opacity="0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path opacity="0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p>Loading applications...</p>
+        </div>
+        
+        <div id="applications-list"></div>
+        <p id="no-applications" style="display: none;">No applications found with this status.</p>
+    </div>
+
+    <div id="application-modal" class="modal">
+        <div id="modal-content-wrapper">
+            </div>
+    </div>
+
+
+    <script type="module">
+        // --- SUPABASE CONFIGURATION ---
+        const SUPABASE_URL = 'https://acziwjxffpcovfzxduuo.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjeml3anhmZnBjb3ZmenhkdXVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwODkxMDYsImV4cCI6MjA3NTY2NTEwNn0.0Yi6__m5slKufjmL-t8BylpJwT0qY1rODIKyU7oh8m4';
+        const TABLE_NAME = 'profiles'; 
+        const PHOTO_BUCKET_NAME = 'profile-photos';
+        // -----------------------------
+
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // --- AUTH GUARD & LOGOUT ---
+        supabaseClient.auth.onAuthStateChange((_event, session) => {
+            if (!session) {
+                window.location.href = 'login.html';
+            }
+        });
+        
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await supabaseClient.auth.signOut();
+        });
+        // --------------------------
+
+        const loader = document.getElementById('loader');
+        const applicationsList = document.getElementById('applications-list');
+        const noApplicationsMessage = document.getElementById('no-applications');
+        const modal = document.getElementById('application-modal');
+        const modalContentWrapper = document.getElementById('modal-content-wrapper');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const searchBar = document.getElementById('search-bar');
+
+        let currentStatus = 'pending';
+        let allApplications = [];
+
+        // --- RENDER FUNCTIONS ---
+
+        function getStatusBadge(status) {
+            let statusClass = '';
+            let icon = '';
+            let text = status.charAt(0).toUpperCase() + status.slice(1);
+
+            switch (status) {
+                case 'pending':
+                    statusClass = 'status-pending';
+                    icon = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+                            </svg>`;
+                    break;
+                case 'approved':
+                    statusClass = 'status-approved';
+                    break;
+                case 'rejected':
+                    statusClass = 'status-rejected';
+                    break;
+                default:
+                    statusClass = 'status-pending';
+            }
+            return `<span class="status-badge ${statusClass}">${icon}${text}</span>`;
+        }
+        
+        function renderApplications(applications) {
+            applicationsList.innerHTML = '';
+            noApplicationsMessage.style.display = applications.length > 0 ? 'none' : 'block';
+            applicationsList.style.display = applications.length === 0 ? 'none' : 'grid';
+
+            applications.forEach(app => {
+                const appCard = document.createElement('div');
+                appCard.className = 'app-card';
+                
+                let profileImageUrl;
+                const photoPath = app.profile_photo;
+
+                if (photoPath) {
+                    profileImageUrl = photoPath.startsWith('http') ? photoPath : supabaseClient.storage.from(PHOTO_BUCKET_NAME).getPublicUrl(photoPath).data.publicUrl;
+                } else {
+                    profileImageUrl = `https://placehold.co/48x48/14161A/A0A2A4?text=${app.name ? app.name.charAt(0) : 'A'}`;
+                }
+
+                const industriesHTML = app.industries ? app.industries.map(industry => `<span class="industry-tag">${industry}</span>`).join('') : '<span class="text-gray-500">None</span>';
+                
+                appCard.innerHTML = `
+                    <div class="app-card-content">
+                        <div class="card-header">
+                            <div class="card-user-info">
+                                <img src="${profileImageUrl}" alt="Avatar" class="card-avatar">
+                                <div class="card-user-details">
+                                    <h3>${app.name || 'Name not provided'}</h3>
+                                    <p>${app.email || 'Email not provided'}</p>
+                                    <p class="city">${app.city || 'Not specified'}</p>
+                                </div>
+                            </div>
+                            ${getStatusBadge(app.status)}
+                        </div>
+
+                        <div class="card-section">
+                            <h4>Industries:</h4>
+                            <div class="card-industries">${industriesHTML}</div>
+                        </div>
+
+                        <div class="card-section">
+                            <h4>Bio:</h4>
+                            <p class="card-bio">${app.short_bio || 'Not provided'}</p>
+                        </div>
+
+                        <p class="card-submitted">
+                            Submitted: ${new Date(app.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+                        </p>
+                    </div>
+
+                    <div class="card-footer">
+                        <button data-action="details" class="card-btn btn-details">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/><path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/></svg>
+                            View Details
+                        </button>
+                        ${app.status === 'pending' ? `
+                            <button data-action="approve" class="card-btn btn-approve">Approve</button>
+                            <button data-action="deny" class="card-btn btn-deny">Deny</button>
+                        ` : ''}
+                    </div>
+                `;
+                
+                appCard.querySelector('[data-action="details"]').addEventListener('click', (e) => { e.stopPropagation(); showModal(app); });
+
+                if (app.status === 'pending') {
+                    appCard.querySelector('[data-action="approve"]').addEventListener('click', (e) => { e.stopPropagation(); updateApplicationStatus(app.id, 'approved'); });
+                    appCard.querySelector('[data-action="deny"]').addEventListener('click', (e) => { e.stopPropagation(); updateApplicationStatus(app.id, 'rejected'); });
+                }
+
+                applicationsList.appendChild(appCard);
+            });
+        }
+        
+        function showModal(app) {
+            let profileImageUrl = app.profile_photo 
+                ? (app.profile_photo.startsWith('http') ? app.profile_photo : supabaseClient.storage.from(PHOTO_BUCKET_NAME).getPublicUrl(app.profile_photo).data.publicUrl)
+                : `https://placehold.co/56x56/14161A/A0A2A4?text=${app.name ? app.name.charAt(0) : 'A'}`;
+
+            const impactLinksHTML = app.impact_links && app.impact_links.length > 0 
+                ? app.impact_links.map(link => `
+                    <div class="input-display impact-link">
+                        <a href="${link.startsWith('http') ? link : '//' + link}" target="_blank">${link}</a>
+                        <button class="copy-btn" data-link="${link}">Copy</button>
+                    </div>
+                `).join('') 
+                : '<p>No links provided.</p>';
+
+            const photosHTML = app.photos && app.photos.length > 0
+                ? `<div class="photo-gallery">
+                    ${app.photos.map(photoPath => {
+                        const photoUrl = photoPath.startsWith('http') ? photoPath : supabaseClient.storage.from(PHOTO_BUCKET_NAME).getPublicUrl(photoPath).data.publicUrl;
+                        return `<a href="${photoUrl}" target="_blank"><img src="${photoUrl}" alt="User Photo"></a>`;
+                    }).join('')}
+                   </div>`
+                : '<p>No photos provided.</p>';
+
+            modalContentWrapper.innerHTML = `
+                <div class="modal-content">
+                    <button id="close-modal-btn">&times;</button>
+                    <div class="modal-header">
+                         <img src="${profileImageUrl}" alt="Avatar" class="modal-avatar">
+                        <div>
+                            ${getStatusBadge(app.status)}
+                            <h2>${app.name || 'Name not provided'}</h2>
+                            <p>${app.email || 'Email not provided'}</p>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="modal-grid">
+                            <div class="modal-section">
+                                <h4>Basic Information</h4>
+                                <p><span>City:</span> <span>${app.city || 'Not specified'}</span></p>
+                                <p><span>Phone:</span> <span>${app.phone || 'Not specified'}</span></p>
+                                <p><span>Invited by:</span> <span>${app.invited_by || 'N/A'}</span></p>
+                                <p><span>Submitted:</span> <span>${new Date(app.created_at).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}</span></p>
+                            </div>
+                             <div class="modal-section">
+                                <h4>Social Links</h4>
+                                <p><span>Instagram:</span> <a href="https://instagram.com/${(app.instagram || '').replace('@','')}" target="_blank">${app.instagram || 'Not specified'}</a></p>
+                            </div>
+                        </div>
+                        <div class="modal-section">
+                            <h4>Selected Industries</h4>
+                            <div class="card-industries">
+                               ${app.industries ? app.industries.map(industry => `<span class="industry-tag">${industry}</span>`).join('') : '<span>None</span>'}
+                            </div>
+                        </div>
+                         <div class="modal-section">
+                            <h4>Short Bio</h4>
+                            <div class="input-display">${app.short_bio || 'Not provided'}</div>
+                        </div>
+                        <div class="modal-section">
+                            <h4>Why They Should Be Accepted</h4>
+                            <div class="input-display">${app.why_accepted || 'Not provided'}</div>
+                        </div>
+                        <div class="modal-section">
+                            <h4>Proof of Impact Links</h4>
+                            ${impactLinksHTML}
+                        </div>
+                         <div class="modal-section">
+                            <h4>User Photos</h4>
+                            ${photosHTML}
+                        </div>
+                    </div>
+                </div>
+                ${app.status === 'pending' ? `
+                <div class="modal-footer">
+                    <button id="approve-btn" data-id="${app.id}" class="btn-modal-approve">Approve Application</button>
+                    <button id="reject-btn" data-id="${app.id}" class="btn-modal-reject">Reject Application</button>
+                </div>
+                ` : ''}
+            `;
+
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('visible'), 10);
+
+            document.getElementById('close-modal-btn').addEventListener('click', hideModal);
+            
+            modalContentWrapper.querySelectorAll('.copy-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    copyToClipboard(e.target, e.target.dataset.link);
+                });
+            });
+
+            if (app.status === 'pending') {
+                document.getElementById('approve-btn').addEventListener('click', () => updateApplicationStatus(app.id, 'approved'));
+                document.getElementById('reject-btn').addEventListener('click', () => updateApplicationStatus(app.id, 'rejected'));
+            }
+        }
+        
+        function hideModal() {
+            modal.classList.remove('visible');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modalContentWrapper.innerHTML = '';
+            }, 300);
+        }
+        
+        // --- DATA LOGIC (SUPABASE) ---
+        async function fetchApplications() {
+            loader.style.display = 'block';
+            applicationsList.innerHTML = '';
+            noApplicationsMessage.style.display = 'none';
+
+            try {
+                const { data, error } = await supabaseClient.from(TABLE_NAME).select('*').order('created_at', { ascending: false });
+                if (error) throw error;
+                allApplications = data;
+                filterAndRenderApplications();
+            } catch (error) {
+                console.error('Error fetching applications:', error);
+                applicationsList.innerHTML = `<p style="color: #f87171; text-align: center; grid-column: 1 / -1;">Failed to load applications.</p>`;
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+        
+        async function updateApplicationStatus(id, status) {
+            try {
+                const { error } = await supabaseClient.from(TABLE_NAME).update({ status }).eq('id', id);
+                if (error) throw error;
+                const appIndex = allApplications.findIndex(app => app.id === id);
+                if (appIndex > -1) allApplications[appIndex].status = status;
+                filterAndRenderApplications();
+                hideModal();
+            } catch (error) {
+                console.error(`Error updating status to ${status}:`, error);
+            }
+        }
+        
+        function filterAndRenderApplications() {
+            const searchTerm = searchBar.value.toLowerCase();
+            const filteredByStatus = allApplications.filter(app => app.status === currentStatus);
+            
+            const finalFiltered = filteredByStatus.filter(app => 
+                (app.name && app.name.toLowerCase().includes(searchTerm))
+            );
+
+            renderApplications(finalFiltered);
+        }
+
+        // --- EVENT HANDLERS ---
+        function handleFilterClick(event) {
+            currentStatus = event.target.dataset.status;
+            filterButtons.forEach(btn => btn.classList.toggle('filter-btn-active', btn.dataset.status === currentStatus));
+            filterAndRenderApplications();
+        }
+
+        function copyToClipboard(button, text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 1500);
+            }).catch(err => {
+                console.error('Error copying text: ', err);
+            });
+        }
+
+        // --- INITIALIZATION ---
+        searchBar.addEventListener('input', filterAndRenderApplications);
+        filterButtons.forEach(button => button.addEventListener('click', handleFilterClick));
+        modal.addEventListener('click', (event) => { if (event.target === modal) hideModal(); });
+        
+        // Check if a user session exists before fetching data
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+            fetchApplications();
+        }
+
+    </script>
+</body>
+</html>
