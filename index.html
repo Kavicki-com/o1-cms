@@ -49,6 +49,11 @@
             </div>
     </div>
 
+    <div id="image-lightbox" class="image-lightbox">
+        <button id="close-lightbox-btn">&times;</button>
+        <img id="lightbox-image" src="" alt="Profile Photo">
+    </div>
+
 
     <script type="module">
         // --- SUPABASE CONFIGURATION ---
@@ -197,11 +202,23 @@
                 `).join('') 
                 : '<p>No links provided.</p>';
 
-            const photosHTML = app.photos && app.photos.length > 0
+            const allPhotos = [];
+            // Adiciona a foto de perfil primeiro
+            if (profileImageUrl && !profileImageUrl.includes('placehold.co')) {
+                allPhotos.push(profileImageUrl);
+            }
+            // Adiciona as outras fotos
+            if (app.photos && app.photos.length > 0) {
+                app.photos.forEach(photoPath => {
+                    const photoUrl = photoPath.startsWith('http') ? photoPath : supabaseClient.storage.from(PHOTO_BUCKET_NAME).getPublicUrl(photoPath).data.publicUrl;
+                    allPhotos.push(photoUrl);
+                });
+            }
+
+            const photosHTML = allPhotos.length > 0
                 ? `<div class="photo-gallery">
-                    ${app.photos.map(photoPath => {
-                        const photoUrl = photoPath.startsWith('http') ? photoPath : supabaseClient.storage.from(PHOTO_BUCKET_NAME).getPublicUrl(photoPath).data.publicUrl;
-                        return `<a href="${photoUrl}" target="_blank"><img src="${photoUrl}" alt="User Photo"></a>`;
+                    ${allPhotos.map(photoUrl => {
+                        return `<img src="${photoUrl}" alt="User Photo" class="gallery-photo-clickable" data-photo-url="${photoUrl}">`;
                     }).join('')}
                    </div>`
                 : '<p>No photos provided.</p>';
@@ -210,7 +227,7 @@
                 <div class="modal-content">
                     <button id="close-modal-btn">&times;</button>
                     <div class="modal-header">
-                         <img src="${profileImageUrl}" alt="Avatar" class="modal-avatar">
+                         <img src="${profileImageUrl}" alt="Avatar" class="modal-avatar profile-photo-clickable" data-profile-photo="${profileImageUrl}">
                         <div>
                             ${getStatusBadge(app.status)}
                             <h2>${app.name || 'Name not provided'}</h2>
@@ -275,6 +292,20 @@
                 });
             });
 
+            const profilePhoto = modalContentWrapper.querySelector('.profile-photo-clickable');
+            if (profilePhoto) {
+                profilePhoto.addEventListener('click', () => {
+                    showImageLightbox(profilePhoto.dataset.profilePhoto);
+                });
+            }
+
+            // Adiciona evento de clique nas fotos da galeria
+            modalContentWrapper.querySelectorAll('.gallery-photo-clickable').forEach(photo => {
+                photo.addEventListener('click', () => {
+                    showImageLightbox(photo.dataset.photoUrl);
+                });
+            });
+
             if (app.status === 'pending') {
                 document.getElementById('approve-btn').addEventListener('click', () => updateApplicationStatus(app.id, 'approved'));
                 document.getElementById('reject-btn').addEventListener('click', () => updateApplicationStatus(app.id, 'rejected'));
@@ -286,6 +317,22 @@
             setTimeout(() => {
                 modal.style.display = 'none';
                 modalContentWrapper.innerHTML = '';
+            }, 300);
+        }
+
+        function showImageLightbox(imageUrl) {
+            const lightbox = document.getElementById('image-lightbox');
+            const lightboxImage = document.getElementById('lightbox-image');
+            lightboxImage.src = imageUrl;
+            lightbox.style.display = 'flex';
+            setTimeout(() => lightbox.classList.add('visible'), 10);
+        }
+
+        function hideImageLightbox() {
+            const lightbox = document.getElementById('image-lightbox');
+            lightbox.classList.remove('visible');
+            setTimeout(() => {
+                lightbox.style.display = 'none';
             }, 300);
         }
         
@@ -355,6 +402,10 @@
         searchBar.addEventListener('input', filterAndRenderApplications);
         filterButtons.forEach(button => button.addEventListener('click', handleFilterClick));
         modal.addEventListener('click', (event) => { if (event.target === modal) hideModal(); });
+        
+        const imageLightbox = document.getElementById('image-lightbox');
+        document.getElementById('close-lightbox-btn').addEventListener('click', hideImageLightbox);
+        imageLightbox.addEventListener('click', (event) => { if (event.target === imageLightbox) hideImageLightbox(); });
         
         // Check if a user session exists before fetching data
         const { data: { session } } = await supabaseClient.auth.getSession();

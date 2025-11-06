@@ -278,6 +278,8 @@
 
         .modal-header { display: flex; align-items: flex-start; gap: 1rem; }
         .modal-avatar { width: 3.5rem; height: 3.5rem; border-radius: 9999px; object-fit: cover; }
+        .profile-photo-clickable { cursor: pointer; transition: opacity 0.2s; }
+        .profile-photo-clickable:hover { opacity: 0.8; }
         .modal-header .status-badge { margin-bottom: 0.25rem; }
         .modal-header h2 { font-size: 1.25rem; font-weight: 700; color: #fff; }
         .modal-header p { color: #9ca3af; margin-top: 0.25rem; }
@@ -356,6 +358,52 @@
         }
         .photo-gallery img:hover {
             opacity: 0.8;
+        }
+        .gallery-photo-clickable {
+            cursor: pointer;
+        }
+
+        /* --- IMAGE LIGHTBOX --- */
+        .image-lightbox {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .image-lightbox.visible {
+            display: flex;
+            opacity: 1;
+        }
+        .image-lightbox img {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 0.5rem;
+        }
+        #close-lightbox-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            color: #fff;
+            font-size: 3rem;
+            line-height: 1;
+            font-weight: 300;
+            background: rgba(0, 0, 0, 0.5);
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        #close-lightbox-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
         }
 
         @media (max-width: 375px) { 
