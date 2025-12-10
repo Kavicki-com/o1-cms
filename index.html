@@ -78,6 +78,7 @@
         
         document.getElementById('logout-btn').addEventListener('click', async () => {
             await supabaseClient.auth.signOut();
+            window.location.href = 'login.html';
         });
 
         const goComplaintsBtn = document.getElementById('go-complaints-btn');
