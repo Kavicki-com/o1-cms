@@ -19,7 +19,10 @@
                 <h1>Applications</h1>
                 <p>Review, approve, or reject pending applications.</p>
             </div>
-            <button id="logout-btn">Logout</button>
+            <div style="display: flex; gap: 0.75rem;">
+                <button id="go-complaints-btn">Complaints</button>
+                <button id="logout-btn">Logout</button>
+            </div>
         </header>
 
         <div class="search-container">
@@ -76,6 +79,13 @@
         document.getElementById('logout-btn').addEventListener('click', async () => {
             await supabaseClient.auth.signOut();
         });
+
+        const goComplaintsBtn = document.getElementById('go-complaints-btn');
+        if (goComplaintsBtn) {
+            goComplaintsBtn.addEventListener('click', () => {
+                window.location.href = 'complaints.html';
+            });
+        }
         // --------------------------
 
         const loader = document.getElementById('loader');
@@ -155,11 +165,6 @@
                             <div class="card-industries">${industriesHTML}</div>
                         </div>
 
-                        <div class="card-section">
-                            <h4>Bio:</h4>
-                            <p class="card-bio">${app.short_bio || 'Not provided'}</p>
-                        </div>
-
                         <p class="card-submitted">
                             Submitted: ${new Date(app.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
                         </p>
@@ -193,8 +198,8 @@
                 ? (app.profile_photo.startsWith('http') ? app.profile_photo : supabaseClient.storage.from(PHOTO_BUCKET_NAME).getPublicUrl(app.profile_photo).data.publicUrl)
                 : `https://placehold.co/56x56/14161A/A0A2A4?text=${app.name ? app.name.charAt(0) : 'A'}`;
 
-            const impactLinksHTML = app.impact_links && app.impact_links.length > 0 
-                ? app.impact_links.map(link => `
+            const impactLinksHTML = app.press_links && app.press_links.length > 0
+                ? app.press_links.map(link => `
                     <div class="input-display impact-link">
                         <a href="${link.startsWith('http') ? link : '//' + link}" target="_blank">${link}</a>
                         <button class="copy-btn" data-link="${link}">Copy</button>
@@ -239,8 +244,7 @@
                             <div class="modal-section">
                                 <h4>Basic Information</h4>
                                 <p><span>City:</span> <span>${app.city || 'Not specified'}</span></p>
-                                <p><span>Phone:</span> <span>${app.phone || 'Not specified'}</span></p>
-                                <p><span>Invited by:</span> <span>${app.invited_by || 'N/A'}</span></p>
+                                <p><span>Phone:</span> <span>${app.phone_country_code && app.phone_number ? `${app.phone_country_code} ${app.phone_number}` : 'Not specified'}</span></p>
                                 <p><span>Submitted:</span> <span>${new Date(app.created_at).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}</span></p>
                             </div>
                              <div class="modal-section">
@@ -253,14 +257,6 @@
                             <div class="card-industries">
                                ${app.industries ? app.industries.map(industry => `<span class="industry-tag">${industry}</span>`).join('') : '<span>None</span>'}
                             </div>
-                        </div>
-                         <div class="modal-section">
-                            <h4>Short Bio</h4>
-                            <div class="input-display">${app.short_bio || 'Not provided'}</div>
-                        </div>
-                        <div class="modal-section">
-                            <h4>Why They Should Be Accepted</h4>
-                            <div class="input-display">${app.why_accepted || 'Not provided'}</div>
                         </div>
                         <div class="modal-section">
                             <h4>Proof of Impact Links</h4>
