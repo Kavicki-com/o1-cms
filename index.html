@@ -62,8 +62,12 @@
         // --- SUPABASE CONFIGURATION ---
         const SUPABASE_URL = 'https://acziwjxffpcovfzxduuo.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjeml3anhmZnBjb3ZmenhkdXVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwODkxMDYsImV4cCI6MjA3NTY2NTEwNn0.0Yi6__m5slKufjmL-t8BylpJwT0qY1rODIKyU7oh8m4';
-        const TABLE_NAME = 'profiles'; 
+        const TABLE_NAME = 'profiles';
         const PHOTO_BUCKET_NAME = 'profile-photos';
+
+        // API Configuration (for auto-login on approval)
+        const API_URL = 'https://o1-api-production.up.railway.app';
+        const ADMIN_SECRET = 'o1-cms-admin-secret-2024-approval-webhook';
         // -----------------------------
 
         const { createClient } = supabase;
@@ -354,14 +358,34 @@
         
         async function updateApplicationStatus(id, status) {
             try {
-                const { error } = await supabaseClient.from(TABLE_NAME).update({ status }).eq('id', id);
-                if (error) throw error;
+                if (status === 'approved') {
+                    // Call API to approve (generates tokens + notifies user via WebSocket)
+                    const response = await fetch(`${API_URL}/admin/profiles/${id}/approve`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ adminSecret: ADMIN_SECRET })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to approve');
+                    }
+
+                    console.log('[CMS] User approved via API, notification sent');
+                } else {
+                    // Rejection continues via Supabase directly (no need to notify)
+                    const { error } = await supabaseClient.from(TABLE_NAME).update({ status }).eq('id', id);
+                    if (error) throw error;
+                }
+
+                // Update local state and re-render
                 const appIndex = allApplications.findIndex(app => app.id === id);
                 if (appIndex > -1) allApplications[appIndex].status = status;
                 filterAndRenderApplications();
                 hideModal();
             } catch (error) {
                 console.error(`Error updating status to ${status}:`, error);
+                alert(`Error: ${error.message}`);
             }
         }
         
