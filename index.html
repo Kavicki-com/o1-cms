@@ -72,16 +72,34 @@
 
         const { createClient } = supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
+
+        // ⚠️ TEMPORARY DEV BYPASS — REMOVE BEFORE COMMITTING TO PRODUCTION
+        // Only active when running on localhost AND user clicked "Enter as dev" on login page.
+        function isLocalhost() {
+            const host = window.location.hostname;
+            return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+        }
+        const __DEV_BYPASS_ACTIVE = isLocalhost() && sessionStorage.getItem('__cms_dev_bypass') === '1';
+        if (__DEV_BYPASS_ACTIVE) {
+            console.warn('[CMS] ⚠️ DEV BYPASS ATIVO — sem autenticacao real. Apenas para uso local.');
+        }
+        // --- END DEV BYPASS ---
+
         // --- AUTH GUARD & LOGOUT ---
-        supabaseClient.auth.onAuthStateChange((_event, session) => {
-            if (!session) {
-                window.location.href = 'login.html';
-            }
-        });
-        
+        if (!__DEV_BYPASS_ACTIVE) {
+            supabaseClient.auth.onAuthStateChange((_event, session) => {
+                if (!session) {
+                    window.location.href = 'login.html';
+                }
+            });
+        }
+
         document.getElementById('logout-btn').addEventListener('click', async () => {
-            await supabaseClient.auth.signOut();
+            if (__DEV_BYPASS_ACTIVE) {
+                sessionStorage.removeItem('__cms_dev_bypass');
+            } else {
+                await supabaseClient.auth.signOut();
+            }
             window.location.href = 'login.html';
         });
 
@@ -145,6 +163,125 @@
             return `<span class="friends-badge">${usersIcon}${count ?? 0}</span>`;
         }
 
+        const INSTAGRAM_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.2c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.21 15.58 2.2 15.2 2.2 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.21 8.8 2.2 12 2.2zm0 1.8c-3.14 0-3.51.01-4.74.07-.97.04-1.5.21-1.85.34-.46.18-.79.4-1.14.74-.34.34-.56.68-.74 1.14-.13.35-.3.88-.34 1.85-.06 1.23-.07 1.6-.07 4.74s.01 3.51.07 4.74c.04.97.21 1.5.34 1.85.18.46.4.79.74 1.14.34.34.68.56 1.14.74.35.13.88.3 1.85.34 1.23.06 1.6.07 4.74.07s3.51-.01 4.74-.07c.97-.04 1.5-.21 1.85-.34.46-.18.79-.4 1.14-.74.34-.34.56-.68.74-1.14.13-.35.3-.88.34-1.85.06-1.23.07-1.6.07-4.74s-.01-3.51-.07-4.74c-.04-.97-.21-1.5-.34-1.85-.18-.46-.4-.79-.74-1.14-.34-.34-.68-.56-1.14-.74-.35-.13-.88-.3-1.85-.34C15.51 4.01 15.14 4 12 4zm0 3.1a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 1.8a3.1 3.1 0 1 0 0 6.2 3.1 3.1 0 0 0 0-6.2zm5.1-2.06a1.14 1.14 0 1 1 0 2.28 1.14 1.14 0 0 1 0-2.28z"/>
+        </svg>`;
+
+        function getInstagramFollowsBadge(count) {
+            return `<span class="instagram-badge" title="Approved members followed on Instagram">${INSTAGRAM_ICON_SVG}${count ?? 0}</span>`;
+        }
+
+        function escapeHTML(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function normalizeInstagramHandle(handle) {
+            return String(handle || '').trim().replace(/^@/, '').toLowerCase();
+        }
+
+        function getInstagramProfileUrl(handle) {
+            const normalizedHandle = normalizeInstagramHandle(handle);
+            return normalizedHandle ? `https://instagram.com/${normalizedHandle}` : '#';
+        }
+
+        function getProfilePhotoUrl(photoPath, fallbackText = 'O') {
+            if (photoPath) {
+                return photoPath.startsWith('http')
+                    ? photoPath
+                    : supabaseClient.storage.from(PHOTO_BUCKET_NAME).getPublicUrl(photoPath).data.publicUrl;
+            }
+
+            return `https://placehold.co/40x40/14161A/A0A2A4?text=${encodeURIComponent(fallbackText)}`;
+        }
+
+        function renderInstagramMutuals(mutuals = []) {
+            if (!mutuals.length) {
+                return '<p class="instagram-mutuals-empty">No Instagram mutual followers matched in O1 yet.</p>';
+            }
+
+            return `
+                <div class="instagram-mutuals-list">
+                    ${mutuals.map(mutual => {
+                        const displayName = mutual.profile?.name || `@${mutual.contact_username}`;
+                        const handle = normalizeInstagramHandle(mutual.profile?.instagram || mutual.contact_username);
+                        const photoUrl = getProfilePhotoUrl(mutual.profile?.profile_photo, displayName.charAt(0) || 'O');
+
+                        return `
+                            <div class="instagram-mutual-item">
+                                <img src="${photoUrl}" alt="${escapeHTML(displayName)}" class="instagram-mutual-avatar">
+                                <div class="instagram-mutual-info">
+                                    <span>${escapeHTML(displayName)}</span>
+                                    ${handle ? `<a href="${getInstagramProfileUrl(handle)}" target="_blank">@${escapeHTML(handle)}</a>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function renderInstagramFollowing(follows = []) {
+            if (!follows.length) {
+                return '<p class="contacts-in-app-empty">No approved members followed on Instagram yet.</p>';
+            }
+
+            return `
+                <div class="contacts-in-app-list">
+                    ${follows.map(follow => {
+                        const displayName = follow.profile?.name || `@${follow.contact_username}`;
+                        const handle = normalizeInstagramHandle(follow.profile?.instagram || follow.contact_username);
+                        const photoUrl = getProfilePhotoUrl(follow.profile?.profile_photo, displayName.charAt(0) || 'O');
+
+                        return `
+                            <div class="contacts-in-app-item">
+                                <img src="${photoUrl}" alt="${escapeHTML(displayName)}" class="contacts-in-app-avatar">
+                                <div class="contacts-in-app-info">
+                                    <span>${escapeHTML(displayName)}</span>
+                                    ${handle ? `<a href="${getInstagramProfileUrl(handle)}" target="_blank">@${escapeHTML(handle)}</a>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function renderContactsInApp(contacts = []) {
+            if (!contacts.length) {
+                return '<p class="contacts-in-app-empty">No synced contacts matched in O1 yet.</p>';
+            }
+
+            return `
+                <div class="contacts-in-app-list">
+                    ${contacts.map(contact => {
+                        const displayName = contact.profile?.name || contact.contact_name || 'O1 member';
+                        const savedName = contact.contact_name && contact.contact_name !== displayName
+                            ? `<span class="contacts-in-app-saved-name">Saved as ${escapeHTML(contact.contact_name)}</span>`
+                            : '';
+                        const handle = normalizeInstagramHandle(contact.profile?.instagram);
+                        const photoUrl = getProfilePhotoUrl(contact.profile?.profile_photo, displayName.charAt(0) || 'O');
+
+                        return `
+                            <div class="contacts-in-app-item">
+                                <img src="${photoUrl}" alt="${escapeHTML(displayName)}" class="contacts-in-app-avatar">
+                                <div class="contacts-in-app-info">
+                                    <span>${escapeHTML(displayName)}</span>
+                                    ${savedName}
+                                    ${handle ? `<a href="${getInstagramProfileUrl(handle)}" target="_blank">@${escapeHTML(handle)}</a>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
         function renderApplications(applications) {
             applicationsList.innerHTML = '';
             noApplicationsMessage.style.display = applications.length > 0 ? 'none' : 'block';
@@ -174,7 +311,10 @@
                                     <h3>${app.name || 'Name not provided'}</h3>
                                     <p>${app.email || 'Email not provided'}</p>
                                     <p class="city">${app.city || 'Not specified'}</p>
-                                    <div style="margin-top: 0.5rem;">${getFriendsBadge(app.friends_in_app)}</div>
+                                    <div class="card-social-badges">
+                                        ${getFriendsBadge(app.friends_in_app)}
+                                        ${getInstagramFollowsBadge(app.following_approved_count)}
+                                    </div>
                                 </div>
                             </div>
                             ${getStatusBadge(app.status)}
@@ -248,6 +388,11 @@
                    </div>`
                 : '<p>No photos provided.</p>';
 
+            const instagramMutualsHTML = renderInstagramMutuals(app.instagram_mutuals || []);
+            const contactsInAppHTML = renderContactsInApp(app.contacts_in_app || []);
+            const instagramFollowingHTML = renderInstagramFollowing(app.instagram_follows || []);
+            const followingCount = app.following_approved_count ?? (app.instagram_follows?.length ?? 0);
+
             modalContentWrapper.innerHTML = `
                 <div class="modal-content">
                     <button id="close-modal-btn">&times;</button>
@@ -260,14 +405,22 @@
                         </div>
                     </div>
                     <div class="modal-body">
-                        <div class="modal-section" style="margin-bottom: 1rem;">
+                        <div class="modal-section" >
                             <h4>Friends in App</h4>
-                            <div class="friends-score-large">
+                            <div class="friends-score-large contact-count-toggle" aria-expanded="false" aria-controls="contacts-in-app-panel">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                                 </svg>
                                 <span>${app.friends_in_app ?? 0}</span>
                                 <span class="clout-score-label">contacts</span>
+                            </div>
+                        </div>
+                        <div class="modal-section" style="margin-bottom: 1rem;">
+                            <h4>Follows in App</h4>
+                            <div class="friends-score-large instagram-follows-large contact-count-toggle" aria-expanded="false" aria-controls="instagram-follows-panel">
+                                ${INSTAGRAM_ICON_SVG}
+                                <span>${followingCount}</span>
+                                <span class="clout-score-label">follows</span>
                             </div>
                         </div>
                         <div class="modal-grid">
@@ -325,6 +478,10 @@
                 });
             }
 
+            modalContentWrapper.querySelectorAll('.contact-count-toggle').forEach(toggle => {
+                toggle.addEventListener('click', () => toggleContactsInAppList(toggle));
+            });
+
             // Adiciona evento de clique nas fotos da galeria
             modalContentWrapper.querySelectorAll('.gallery-photo-clickable').forEach(photo => {
                 photo.addEventListener('click', () => {
@@ -346,6 +503,20 @@
             }, 300);
         }
 
+        function toggleContactsInAppList(button) {
+            const contactsPanelId = button.getAttribute('aria-controls');
+            const contactsPanel = contactsPanelId ? document.getElementById(contactsPanelId) : null;
+            if (!contactsPanel) return;
+
+            const willExpand = contactsPanel.hidden;
+            contactsPanel.hidden = !willExpand;
+            button.setAttribute('aria-expanded', String(willExpand));
+            const actionLabel = button.querySelector('.contact-count-action');
+            if (actionLabel) {
+                actionLabel.textContent = willExpand ? 'Hide list' : 'View list';
+            }
+        }
+
         function showImageLightbox(imageUrl) {
             const lightbox = document.getElementById('image-lightbox');
             const lightboxImage = document.getElementById('lightbox-image');
@@ -363,6 +534,158 @@
         }
         
         // --- DATA LOGIC (SUPABASE) ---
+        async function fetchInstagramMutualsForApplications(applications) {
+            const userIds = applications.map(app => app.user_id).filter(Boolean);
+            if (!userIds.length) return applications.map(app => ({ ...app, instagram_mutuals: [] }));
+
+            const { data: instagramContacts, error: instagramError } = await supabaseClient
+                .from('instagram_contacts')
+                .select('user_id, contact_username, matched_profile_id')
+                .in('user_id', userIds)
+                .eq('is_follower', true)
+                .eq('is_following', true)
+                .not('matched_profile_id', 'is', null);
+
+            if (instagramError) {
+                console.error('Error fetching Instagram mutuals:', instagramError);
+                return applications.map(app => ({ ...app, instagram_mutuals: [] }));
+            }
+
+            const matchedProfileIds = [...new Set((instagramContacts || []).map(contact => contact.matched_profile_id).filter(Boolean))];
+            let profilesByUserId = new Map();
+
+            if (matchedProfileIds.length > 0) {
+                const { data: matchedProfiles, error: profilesError } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .select('user_id, name, email, instagram, profile_photo, status')
+                    .in('user_id', matchedProfileIds);
+
+                if (profilesError) {
+                    console.error('Error fetching Instagram mutual profiles:', profilesError);
+                } else {
+                    profilesByUserId = new Map((matchedProfiles || []).map(profile => [profile.user_id, profile]));
+                }
+            }
+
+            const mutualsByUserId = new Map();
+            (instagramContacts || []).forEach(contact => {
+                const mutuals = mutualsByUserId.get(contact.user_id) || [];
+                mutuals.push({
+                    contact_username: contact.contact_username,
+                    matched_profile_id: contact.matched_profile_id,
+                    profile: profilesByUserId.get(contact.matched_profile_id) || null
+                });
+                mutualsByUserId.set(contact.user_id, mutuals);
+            });
+
+            return applications.map(app => ({
+                ...app,
+                instagram_mutuals: mutualsByUserId.get(app.user_id) || []
+            }));
+        }
+
+        async function fetchInstagramFollowingForApplications(applications) {
+            const userIds = applications.map(app => app.user_id).filter(Boolean);
+            if (!userIds.length) return applications.map(app => ({ ...app, instagram_follows: [] }));
+
+            // Pega TODOS os matches que o user segue (independente de reciprocidade).
+            // Sem o filtro is_follower=true → inclui mutuals tambem.
+            const { data: instagramContacts, error: instagramError } = await supabaseClient
+                .from('instagram_contacts')
+                .select('user_id, contact_username, matched_profile_id')
+                .in('user_id', userIds)
+                .eq('is_following', true)
+                .not('matched_profile_id', 'is', null);
+
+            if (instagramError) {
+                console.error('Error fetching Instagram follows:', instagramError);
+                return applications.map(app => ({ ...app, instagram_follows: [] }));
+            }
+
+            const matchedProfileIds = [...new Set((instagramContacts || []).map(contact => contact.matched_profile_id).filter(Boolean))];
+            let profilesByUserId = new Map();
+
+            if (matchedProfileIds.length > 0) {
+                const { data: matchedProfiles, error: profilesError } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .select('user_id, name, email, instagram, profile_photo, status')
+                    .in('user_id', matchedProfileIds);
+
+                if (profilesError) {
+                    console.error('Error fetching Instagram follow profiles:', profilesError);
+                } else {
+                    profilesByUserId = new Map((matchedProfiles || []).map(profile => [profile.user_id, profile]));
+                }
+            }
+
+            const followsByUserId = new Map();
+            (instagramContacts || []).forEach(contact => {
+                const follows = followsByUserId.get(contact.user_id) || [];
+                follows.push({
+                    contact_username: contact.contact_username,
+                    matched_profile_id: contact.matched_profile_id,
+                    profile: profilesByUserId.get(contact.matched_profile_id) || null
+                });
+                followsByUserId.set(contact.user_id, follows);
+            });
+
+            return applications.map(app => ({
+                ...app,
+                instagram_follows: followsByUserId.get(app.user_id) || []
+            }));
+        }
+
+        async function fetchContactsInAppForApplications(applications) {
+            const userIds = applications.map(app => app.user_id).filter(Boolean);
+            if (!userIds.length) return applications.map(app => ({ ...app, contacts_in_app: [] }));
+
+            const { data: importedContacts, error: contactsError } = await supabaseClient
+                .from('imported_contacts')
+                .select('user_id, contact_name, matched_profile_id')
+                .in('user_id', userIds)
+                .not('matched_profile_id', 'is', null);
+
+            if (contactsError) {
+                console.error('Error fetching contacts in app:', contactsError);
+                return applications.map(app => ({ ...app, contacts_in_app: [] }));
+            }
+
+            const matchedProfileIds = [...new Set((importedContacts || []).map(contact => contact.matched_profile_id).filter(Boolean))];
+            let profilesByUserId = new Map();
+
+            if (matchedProfileIds.length > 0) {
+                const { data: matchedProfiles, error: profilesError } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .select('user_id, name, email, instagram, profile_photo, status')
+                    .in('user_id', matchedProfileIds);
+
+                if (profilesError) {
+                    console.error('Error fetching contact profiles:', profilesError);
+                } else {
+                    profilesByUserId = new Map((matchedProfiles || []).map(profile => [profile.user_id, profile]));
+                }
+            }
+
+            const contactsByUserId = new Map();
+            (importedContacts || []).forEach(contact => {
+                const contacts = contactsByUserId.get(contact.user_id) || [];
+                const alreadyAdded = contacts.some(existing => existing.matched_profile_id === contact.matched_profile_id);
+                if (!alreadyAdded) {
+                    contacts.push({
+                        contact_name: contact.contact_name,
+                        matched_profile_id: contact.matched_profile_id,
+                        profile: profilesByUserId.get(contact.matched_profile_id) || null
+                    });
+                }
+                contactsByUserId.set(contact.user_id, contacts);
+            });
+
+            return applications.map(app => ({
+                ...app,
+                contacts_in_app: contactsByUserId.get(app.user_id) || []
+            }));
+        }
+
         async function fetchApplications() {
             loader.style.display = 'block';
             applicationsList.innerHTML = '';
@@ -371,7 +694,9 @@
             try {
                 const { data, error } = await supabaseClient.from(TABLE_NAME).select('*').order('created_at', { ascending: false });
                 if (error) throw error;
-                allApplications = data;
+                const applicationsWithMutuals = await fetchInstagramMutualsForApplications(data || []);
+                const applicationsWithFollowing = await fetchInstagramFollowingForApplications(applicationsWithMutuals);
+                allApplications = await fetchContactsInAppForApplications(applicationsWithFollowing);
                 filterAndRenderApplications();
             } catch (error) {
                 console.error('Error fetching applications:', error);
@@ -454,8 +779,9 @@
         imageLightbox.addEventListener('click', (event) => { if (event.target === imageLightbox) hideImageLightbox(); });
         
         // Check if a user session exists before fetching data
+        // ⚠️ TEMPORARY DEV BYPASS: also fetch when __DEV_BYPASS_ACTIVE is true
         const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session) {
+        if (session || __DEV_BYPASS_ACTIVE) {
             fetchApplications();
         }
 
