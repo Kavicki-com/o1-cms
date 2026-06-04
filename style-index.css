@@ -312,6 +312,203 @@
             width: 16px;
             height: 16px;
         }
+
+        /* --- INSTAGRAM FOLLOWS BADGE & PANEL --- */
+        .instagram-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #833AB4 0%, #E1306C 70%, #F77737 100%);
+            color: #fff;
+            margin-left: 0.5rem;
+        }
+        .instagram-badge svg {
+            width: 12px;
+            height: 12px;
+        }
+        .instagram-follows-large {
+            background: linear-gradient(135deg, #833AB4 0%, #E1306C 70%, #F77737 100%);
+        }
+        .card-social-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+        .card-social-badges .friends-badge,
+        .card-social-badges .instagram-badge {
+            margin-left: 0;
+        }
+        .contact-count-toggle {
+            width: 100%;
+            justify-content: flex-start;
+            transition: filter 0.2s, transform 0.2s;
+        }
+        .contact-count-toggle:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+        .contact-count-action {
+            margin-left: auto;
+            font-size: 0.75rem;
+            font-weight: 600;
+            opacity: 0.85;
+        }
+        .contacts-in-app-panel {
+            margin-top: 0.75rem;
+            border: 1px solid #2D3340;
+            border-radius: 0.5rem;
+            background-color: #171A20;
+            overflow: hidden;
+        }
+        .contacts-in-app-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.625rem 0.75rem;
+            color: #d1d5db;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            border-bottom: 1px solid #2D3340;
+        }
+        .contacts-in-app-header strong {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 9999px;
+            background-color: #2D2F34;
+            color: #ffffff;
+            font-size: 0.75rem;
+        }
+        .contacts-in-app-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+            padding: 0.75rem;
+        }
+        .contacts-in-app-item {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            min-width: 0;
+        }
+        .contacts-in-app-avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 9999px;
+            object-fit: cover;
+            flex: 0 0 auto;
+        }
+        .contacts-in-app-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            line-height: 1.25;
+        }
+        .contacts-in-app-info span,
+        .contacts-in-app-info a {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .contacts-in-app-info > span:first-child {
+            color: #f3f4f6;
+            font-weight: 600;
+        }
+        .contacts-in-app-info a {
+            color: #93c5fd;
+            font-size: 0.75rem;
+        }
+        .contacts-in-app-saved-name,
+        .contacts-in-app-empty {
+            color: #9ca3af;
+            font-size: 0.75rem;
+        }
+        .contacts-in-app-empty {
+            margin: 0;
+            padding: 0.75rem;
+        }
+        .instagram-mutuals {
+            margin-top: 0.75rem;
+            border: 1px solid #2D3340;
+            border-radius: 0.5rem;
+            background-color: #171A20;
+            overflow: hidden;
+        }
+        .instagram-mutuals-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.625rem 0.75rem;
+            color: #d1d5db;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            border-bottom: 1px solid #2D3340;
+        }
+        .instagram-mutuals-header strong {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 9999px;
+            background-color: #2D2F34;
+            color: #ffffff;
+            font-size: 0.75rem;
+        }
+        .instagram-mutuals-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+            padding: 0.75rem;
+        }
+        .instagram-mutual-item {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            min-width: 0;
+        }
+        .instagram-mutual-avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 9999px;
+            object-fit: cover;
+            flex: 0 0 auto;
+        }
+        .instagram-mutual-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            line-height: 1.25;
+        }
+        .instagram-mutual-info span,
+        .instagram-mutual-info a {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .instagram-mutual-info span {
+            color: #f3f4f6;
+            font-weight: 600;
+        }
+        .instagram-mutual-info a {
+            color: #93c5fd;
+            font-size: 0.75rem;
+        }
+        .instagram-mutuals-empty {
+            margin: 0;
+            padding: 0.75rem;
+            color: #6b7280;
+            font-size: 0.8125rem;
+        }
         .scores-container {
             display: flex;
             gap: 0.75rem;
