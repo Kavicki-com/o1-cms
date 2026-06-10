@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-     <link rel="stylesheet" href="./style-index.css" type="text/css">
+     <link rel="stylesheet" href="./style-index.css?v=20260605-2" type="text/css">
      <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
 </head>
 <body>
@@ -55,6 +55,15 @@
     <div id="image-lightbox" class="image-lightbox">
         <button id="close-lightbox-btn">&times;</button>
         <img id="lightbox-image" src="" alt="Profile Photo">
+    </div>
+
+    <div id="list-popup" role="dialog" aria-modal="true" aria-labelledby="list-popup-title">
+        <div class="list-popup-inner">
+            <button type="button" class="close-popup-btn" id="close-list-popup-btn" aria-label="Close">&times;</button>
+            <h3 id="list-popup-title"></h3>
+            <div class="list-popup-count" id="list-popup-count"></div>
+            <div class="list-popup-list" id="list-popup-list"></div>
+        </div>
     </div>
 
 
@@ -167,9 +176,13 @@
             <path d="M12 2.2c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.21 15.58 2.2 15.2 2.2 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.21 8.8 2.2 12 2.2zm0 1.8c-3.14 0-3.51.01-4.74.07-.97.04-1.5.21-1.85.34-.46.18-.79.4-1.14.74-.34.34-.56.68-.74 1.14-.13.35-.3.88-.34 1.85-.06 1.23-.07 1.6-.07 4.74s.01 3.51.07 4.74c.04.97.21 1.5.34 1.85.18.46.4.79.74 1.14.34.34.68.56 1.14.74.35.13.88.3 1.85.34 1.23.06 1.6.07 4.74.07s3.51-.01 4.74-.07c.97-.04 1.5-.21 1.85-.34.46-.18.79-.4 1.14-.74.34-.34.56-.68.74-1.14.13-.35.3-.88.34-1.85.06-1.23.07-1.6.07-4.74s-.01-3.51-.07-4.74c-.04-.97-.21-1.5-.34-1.85-.18-.46-.4-.79-.74-1.14-.34-.34-.68-.56-1.14-.74-.35-.13-.88-.3-1.85-.34C15.51 4.01 15.14 4 12 4zm0 3.1a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 1.8a3.1 3.1 0 1 0 0 6.2 3.1 3.1 0 0 0 0-6.2zm5.1-2.06a1.14 1.14 0 1 1 0 2.28 1.14 1.14 0 0 1 0-2.28z"/>
         </svg>`;
 
-        function getInstagramFollowsBadge(count) {
-            return `<span class="instagram-badge" title="Approved members followed on Instagram">${INSTAGRAM_ICON_SVG}${count ?? 0}</span>`;
+        function getInstagramMutualsBadge(count) {
+            return `<span class="instagram-badge" title="Instagram mutuals also in O1">${INSTAGRAM_ICON_SVG}${count ?? 0}</span>`;
         }
+
+        const SYNC_ICON_SVG = `<svg class="sync-ig-icon" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;">
+            <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.74 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+        </svg>`;
 
         function escapeHTML(value) {
             return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -216,32 +229,6 @@
                             <div class="instagram-mutual-item">
                                 <img src="${photoUrl}" alt="${escapeHTML(displayName)}" class="instagram-mutual-avatar">
                                 <div class="instagram-mutual-info">
-                                    <span>${escapeHTML(displayName)}</span>
-                                    ${handle ? `<a href="${getInstagramProfileUrl(handle)}" target="_blank">@${escapeHTML(handle)}</a>` : ''}
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
-        }
-
-        function renderInstagramFollowing(follows = []) {
-            if (!follows.length) {
-                return '<p class="contacts-in-app-empty">No approved members followed on Instagram yet.</p>';
-            }
-
-            return `
-                <div class="contacts-in-app-list">
-                    ${follows.map(follow => {
-                        const displayName = follow.profile?.name || `@${follow.contact_username}`;
-                        const handle = normalizeInstagramHandle(follow.profile?.instagram || follow.contact_username);
-                        const photoUrl = getProfilePhotoUrl(follow.profile?.profile_photo, displayName.charAt(0) || 'O');
-
-                        return `
-                            <div class="contacts-in-app-item">
-                                <img src="${photoUrl}" alt="${escapeHTML(displayName)}" class="contacts-in-app-avatar">
-                                <div class="contacts-in-app-info">
                                     <span>${escapeHTML(displayName)}</span>
                                     ${handle ? `<a href="${getInstagramProfileUrl(handle)}" target="_blank">@${escapeHTML(handle)}</a>` : ''}
                                 </div>
@@ -312,8 +299,8 @@
                                     <p>${app.email || 'Email not provided'}</p>
                                     <p class="city">${app.city || 'Not specified'}</p>
                                     <div class="card-social-badges">
-                                        ${getFriendsBadge(app.friends_in_app)}
-                                        ${getInstagramFollowsBadge(app.following_approved_count)}
+                                        ${getFriendsBadge(app.contacts_in_app?.length ?? 0)}
+                                        ${getInstagramMutualsBadge(app.instagram_mutuals?.length ?? 0)}
                                     </div>
                                 </div>
                             </div>
@@ -341,8 +328,16 @@
                         ` : ''}
                     </div>
                 `;
-                
+
                 appCard.querySelector('[data-action="details"]').addEventListener('click', (e) => { e.stopPropagation(); showModal(app); });
+
+                const syncIgBtn = appCard.querySelector('[data-action="sync-ig"]');
+                if (syncIgBtn && app.user_id) {
+                    syncIgBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        triggerInstagramSyncForUser(syncIgBtn, app.user_id);
+                    });
+                }
 
                 if (app.status === 'pending') {
                     appCard.querySelector('[data-action="approve"]').addEventListener('click', (e) => { e.stopPropagation(); updateApplicationStatus(app.id, 'approved'); });
@@ -388,10 +383,8 @@
                    </div>`
                 : '<p>No photos provided.</p>';
 
-            const instagramMutualsHTML = renderInstagramMutuals(app.instagram_mutuals || []);
-            const contactsInAppHTML = renderContactsInApp(app.contacts_in_app || []);
-            const instagramFollowingHTML = renderInstagramFollowing(app.instagram_follows || []);
-            const followingCount = app.following_approved_count ?? (app.instagram_follows?.length ?? 0);
+            const contactsInApp = app.contacts_in_app || [];
+            const instagramMutuals = app.instagram_mutuals || [];
 
             modalContentWrapper.innerHTML = `
                 <div class="modal-content">
@@ -405,23 +398,32 @@
                         </div>
                     </div>
                     <div class="modal-body">
-                        <div class="modal-section" >
+                        <div class="modal-section">
                             <h4>Friends in App</h4>
-                            <div class="friends-score-large contact-count-toggle" aria-expanded="false" aria-controls="contacts-in-app-panel">
+                            <button type="button" class="friends-score-large list-popup-trigger" data-popup-type="contacts">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                                 </svg>
-                                <span>${app.friends_in_app ?? 0}</span>
+                                <span>${contactsInApp.length}</span>
                                 <span class="clout-score-label">contacts</span>
-                            </div>
+                                <span class="contact-count-action">View list</span>
+                            </button>
+                        </div>
+                        <div class="modal-section">
+                            <h4>Instagram Mutuals in App</h4>
+                            <button type="button" class="friends-score-large instagram-mutuals-large list-popup-trigger" data-popup-type="instagram_mutuals">
+                                ${INSTAGRAM_ICON_SVG}
+                                <span>${instagramMutuals.length}</span>
+                                <span class="clout-score-label">mutuals</span>
+                                <span class="contact-count-action">View list</span>
+                            </button>
                         </div>
                         <div class="modal-section" style="margin-bottom: 1rem;">
-                            <h4>Follows in App</h4>
-                            <div class="friends-score-large instagram-follows-large contact-count-toggle" aria-expanded="false" aria-controls="instagram-follows-panel">
-                                ${INSTAGRAM_ICON_SVG}
-                                <span>${followingCount}</span>
-                                <span class="clout-score-label">follows</span>
-                            </div>
+                            <button type="button" class="modal-sync-ig-btn" data-action="sync-ig" data-user-id="${app.user_id ?? ''}" ${app.user_id ? '' : 'disabled'} title="Buscar dados frescos do Instagram para este perfil">
+                                ${SYNC_ICON_SVG}
+                                <span data-sync-label>Sync Instagram data</span>
+                            </button>
+                            <p class="modal-sync-ig-hint">Re-fetches Instagram following and detects mutual connections with other O1 members.</p>
                         </div>
                         <div class="modal-grid">
                             <div class="modal-section">
@@ -478,8 +480,26 @@
                 });
             }
 
-            modalContentWrapper.querySelectorAll('.contact-count-toggle').forEach(toggle => {
-                toggle.addEventListener('click', () => toggleContactsInAppList(toggle));
+            modalContentWrapper.querySelectorAll('.list-popup-trigger').forEach(trigger => {
+                trigger.addEventListener('click', () => {
+                    if (trigger.disabled) return;
+                    const type = trigger.dataset.popupType;
+                    if (type === 'contacts') {
+                        showListPopup({
+                            title: 'Friends in App',
+                            items: app.contacts_in_app || [],
+                            renderHTML: renderContactsInApp,
+                            countLabel: (n) => `${n} ${n === 1 ? 'synced contact' : 'synced contacts'} matched in O1`
+                        });
+                    } else if (type === 'instagram_mutuals') {
+                        showListPopup({
+                            title: 'Instagram Mutuals in App',
+                            items: app.instagram_mutuals || [],
+                            renderHTML: renderInstagramMutuals,
+                            countLabel: (n) => `${n} ${n === 1 ? 'mutual follower' : 'mutual followers'} matched in O1`
+                        });
+                    }
+                });
             });
 
             // Adiciona evento de clique nas fotos da galeria
@@ -488,6 +508,14 @@
                     showImageLightbox(photo.dataset.photoUrl);
                 });
             });
+
+            // Botao "Sync Instagram data" dentro do modal de detalhes
+            const modalSyncBtn = modalContentWrapper.querySelector('.modal-sync-ig-btn');
+            if (modalSyncBtn && app.user_id) {
+                modalSyncBtn.addEventListener('click', () => {
+                    triggerInstagramSyncForUser(modalSyncBtn, app.user_id);
+                });
+            }
 
             if (app.status === 'pending') {
                 document.getElementById('approve-btn').addEventListener('click', () => updateApplicationStatus(app.id, 'approved'));
@@ -503,18 +531,26 @@
             }, 300);
         }
 
-        function toggleContactsInAppList(button) {
-            const contactsPanelId = button.getAttribute('aria-controls');
-            const contactsPanel = contactsPanelId ? document.getElementById(contactsPanelId) : null;
-            if (!contactsPanel) return;
+        function showListPopup({ title, items, renderHTML, countLabel }) {
+            const popup = document.getElementById('list-popup');
+            const titleEl = document.getElementById('list-popup-title');
+            const countEl = document.getElementById('list-popup-count');
+            const listEl = document.getElementById('list-popup-list');
 
-            const willExpand = contactsPanel.hidden;
-            contactsPanel.hidden = !willExpand;
-            button.setAttribute('aria-expanded', String(willExpand));
-            const actionLabel = button.querySelector('.contact-count-action');
-            if (actionLabel) {
-                actionLabel.textContent = willExpand ? 'Hide list' : 'View list';
-            }
+            titleEl.textContent = title;
+            countEl.textContent = countLabel(items.length);
+            listEl.innerHTML = renderHTML(items);
+
+            popup.style.display = 'flex';
+            setTimeout(() => popup.classList.add('visible'), 10);
+        }
+
+        function hideListPopup() {
+            const popup = document.getElementById('list-popup');
+            popup.classList.remove('visible');
+            setTimeout(() => {
+                popup.style.display = 'none';
+            }, 200);
         }
 
         function showImageLightbox(imageUrl) {
@@ -584,73 +620,48 @@
             }));
         }
 
-        async function fetchInstagramFollowingForApplications(applications) {
-            const userIds = applications.map(app => app.user_id).filter(Boolean);
-            if (!userIds.length) return applications.map(app => ({ ...app, instagram_follows: [] }));
-
-            // Pega TODOS os matches que o user segue (independente de reciprocidade).
-            // Sem o filtro is_follower=true → inclui mutuals tambem.
-            const { data: instagramContacts, error: instagramError } = await supabaseClient
-                .from('instagram_contacts')
-                .select('user_id, contact_username, matched_profile_id')
-                .in('user_id', userIds)
-                .eq('is_following', true)
-                .not('matched_profile_id', 'is', null);
-
-            if (instagramError) {
-                console.error('Error fetching Instagram follows:', instagramError);
-                return applications.map(app => ({ ...app, instagram_follows: [] }));
-            }
-
-            const matchedProfileIds = [...new Set((instagramContacts || []).map(contact => contact.matched_profile_id).filter(Boolean))];
-            let profilesByUserId = new Map();
-
-            if (matchedProfileIds.length > 0) {
-                const { data: matchedProfiles, error: profilesError } = await supabaseClient
-                    .from(TABLE_NAME)
-                    .select('user_id, name, email, instagram, profile_photo, status')
-                    .in('user_id', matchedProfileIds);
-
-                if (profilesError) {
-                    console.error('Error fetching Instagram follow profiles:', profilesError);
-                } else {
-                    profilesByUserId = new Map((matchedProfiles || []).map(profile => [profile.user_id, profile]));
-                }
-            }
-
-            const followsByUserId = new Map();
-            (instagramContacts || []).forEach(contact => {
-                const follows = followsByUserId.get(contact.user_id) || [];
-                follows.push({
-                    contact_username: contact.contact_username,
-                    matched_profile_id: contact.matched_profile_id,
-                    profile: profilesByUserId.get(contact.matched_profile_id) || null
-                });
-                followsByUserId.set(contact.user_id, follows);
-            });
-
-            return applications.map(app => ({
-                ...app,
-                instagram_follows: followsByUserId.get(app.user_id) || []
-            }));
-        }
-
         async function fetchContactsInAppForApplications(applications) {
             const userIds = applications.map(app => app.user_id).filter(Boolean);
             if (!userIds.length) return applications.map(app => ({ ...app, contacts_in_app: [] }));
 
-            const { data: importedContacts, error: contactsError } = await supabaseClient
+            // Fonte primaria: contact_connections com source='phone_contact'.
+            // Esses sao os matches descobertos via sync LGPD-compliant
+            // (hashes de telefone) — formato moderno do app.
+            const { data: phoneConnections, error: connError } = await supabaseClient
+                .from('contact_connections')
+                .select('user_id, connected_user_id')
+                .in('user_id', userIds)
+                .eq('source', 'phone_contact');
+
+            // Fonte legada (mantida como fallback): imported_contacts com matched_profile_id.
+            // Usuarios antigos podem ter dados aqui se ja sincronizaram em versoes antigas.
+            const { data: importedContacts, error: importedError } = await supabaseClient
                 .from('imported_contacts')
                 .select('user_id, contact_name, matched_profile_id')
                 .in('user_id', userIds)
                 .not('matched_profile_id', 'is', null);
 
-            if (contactsError) {
-                console.error('Error fetching contacts in app:', contactsError);
-                return applications.map(app => ({ ...app, contacts_in_app: [] }));
-            }
+            if (connError) console.error('Error fetching contact_connections:', connError);
+            if (importedError) console.error('Error fetching imported_contacts:', importedError);
 
-            const matchedProfileIds = [...new Set((importedContacts || []).map(contact => contact.matched_profile_id).filter(Boolean))];
+            // Unifica as 2 fontes em (user_id, matched_id, optional contact_name)
+            const unified = [];
+            (phoneConnections || []).forEach(row => {
+                unified.push({
+                    user_id: row.user_id,
+                    matched_profile_id: row.connected_user_id,
+                    contact_name: null,
+                });
+            });
+            (importedContacts || []).forEach(row => {
+                unified.push({
+                    user_id: row.user_id,
+                    matched_profile_id: row.matched_profile_id,
+                    contact_name: row.contact_name,
+                });
+            });
+
+            const matchedProfileIds = [...new Set(unified.map(c => c.matched_profile_id).filter(Boolean))];
             let profilesByUserId = new Map();
 
             if (matchedProfileIds.length > 0) {
@@ -666,8 +677,10 @@
                 }
             }
 
+            // Dedupe por (user_id, matched_profile_id) — alguns aparecem em ambas fontes
             const contactsByUserId = new Map();
-            (importedContacts || []).forEach(contact => {
+            unified.forEach(contact => {
+                if (!contact.matched_profile_id) return;
                 const contacts = contactsByUserId.get(contact.user_id) || [];
                 const alreadyAdded = contacts.some(existing => existing.matched_profile_id === contact.matched_profile_id);
                 if (!alreadyAdded) {
@@ -695,8 +708,7 @@
                 const { data, error } = await supabaseClient.from(TABLE_NAME).select('*').order('created_at', { ascending: false });
                 if (error) throw error;
                 const applicationsWithMutuals = await fetchInstagramMutualsForApplications(data || []);
-                const applicationsWithFollowing = await fetchInstagramFollowingForApplications(applicationsWithMutuals);
-                allApplications = await fetchContactsInAppForApplications(applicationsWithFollowing);
+                allApplications = await fetchContactsInAppForApplications(applicationsWithMutuals);
                 filterAndRenderApplications();
             } catch (error) {
                 console.error('Error fetching applications:', error);
@@ -706,6 +718,61 @@
             }
         }
         
+        async function triggerInstagramSyncForUser(button, userId) {
+            if (!userId || button.disabled || button.classList.contains('syncing')) return;
+
+            const label = button.querySelector('[data-sync-label]');
+            const originalText = label ? label.textContent : 'Sync IG';
+
+            button.classList.add('syncing');
+            button.disabled = true;
+            if (label) label.textContent = 'Syncing...';
+
+            try {
+                const response = await fetch(
+                    `${API_URL}/admin/instagram-sync/users/${encodeURIComponent(userId)}?force=true`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-admin-secret': ADMIN_SECRET,
+                        },
+                    },
+                );
+
+                const json = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    const errMsg = json.error || json.detail || `HTTP ${response.status}`;
+                    alert(`Sync failed: ${errMsg}`);
+                    return;
+                }
+
+                const data = json.data || {};
+                const status = data.status || 'unknown';
+                const matched = data.total_matched ?? 0;
+                const connections = data.connections_created ?? 0;
+                const message = data.message || json.message;
+
+                if (status === 'skipped') {
+                    alert(`Sync skipped.\n\n${message || 'Already synced recently or no Instagram handle.'}`);
+                } else if (status === 'failed') {
+                    alert(`Sync failed: ${data.error_code || 'unknown error'}\n\n${message || ''}`);
+                } else {
+                    alert(`Sync completed!\n\nMatches found: ${matched}\nMutual connections created: ${connections}`);
+                    // Recarrega a lista pra refletir os novos dados na tabela
+                    await fetchApplications();
+                }
+            } catch (error) {
+                console.error('[CMS] triggerInstagramSyncForUser failed:', error);
+                alert(`Network error: ${error.message || 'unknown'}`);
+            } finally {
+                button.classList.remove('syncing');
+                button.disabled = false;
+                if (label) label.textContent = originalText;
+            }
+        }
+
         async function updateApplicationStatus(id, status) {
             try {
                 if (status === 'approved') {
@@ -777,6 +844,15 @@
         const imageLightbox = document.getElementById('image-lightbox');
         document.getElementById('close-lightbox-btn').addEventListener('click', hideImageLightbox);
         imageLightbox.addEventListener('click', (event) => { if (event.target === imageLightbox) hideImageLightbox(); });
+
+        const listPopup = document.getElementById('list-popup');
+        document.getElementById('close-list-popup-btn').addEventListener('click', hideListPopup);
+        listPopup.addEventListener('click', (event) => { if (event.target === listPopup) hideListPopup(); });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && listPopup.classList.contains('visible')) {
+                hideListPopup();
+            }
+        });
         
         // Check if a user session exists before fetching data
         // ⚠️ TEMPORARY DEV BYPASS: also fetch when __DEV_BYPASS_ACTIVE is true

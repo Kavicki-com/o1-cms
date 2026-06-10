@@ -228,6 +228,9 @@
         .btn-approve:hover { background-color: #374151; }
         .btn-deny { color: #fff; background-color: #B91C1C; }
         .btn-deny:hover { background-color: #991b1b; }
+        @keyframes sync-spin {
+            to { transform: rotate(360deg); }
+        }
         
         /* --- BADGE DE STATUS --- */
         .status-badge {
@@ -313,7 +316,7 @@
             height: 16px;
         }
 
-        /* --- INSTAGRAM FOLLOWS BADGE & PANEL --- */
+        /* --- INSTAGRAM MUTUALS BADGE & SCORE --- */
         .instagram-badge {
             display: inline-flex;
             align-items: center;
@@ -330,7 +333,7 @@
             width: 12px;
             height: 12px;
         }
-        .instagram-follows-large {
+        .instagram-mutuals-large {
             background: linear-gradient(135deg, #833AB4 0%, #E1306C 70%, #F77737 100%);
         }
         .card-social-badges {
@@ -342,6 +345,151 @@
         .card-social-badges .friends-badge,
         .card-social-badges .instagram-badge {
             margin-left: 0;
+        }
+
+        /* --- LIST POPUP (acima do modal de detalhes) --- */
+        #list-popup {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        #list-popup.visible {
+            opacity: 1;
+        }
+        .list-popup-inner {
+            background-color: #1C1C1C;
+            border-radius: 0.75rem;
+            border: 1px solid #374151;
+            width: 100%;
+            max-width: 32rem;
+            max-height: 80vh;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transform: translateY(8px);
+            transition: transform 0.2s ease;
+        }
+        #list-popup.visible .list-popup-inner {
+            transform: translateY(0);
+        }
+        .list-popup-inner .close-popup-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 9999px;
+            border: none;
+            background-color: transparent;
+            color: #9ca3af;
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .list-popup-inner .close-popup-btn:hover {
+            background-color: #2D3340;
+            color: #fff;
+        }
+        .list-popup-inner h3 {
+            color: #fff;
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin: 0 2rem 0.25rem 0;
+        }
+        .list-popup-count {
+            color: #9ca3af;
+            font-size: 0.8125rem;
+            margin-bottom: 1rem;
+        }
+        .list-popup-list {
+            overflow-y: auto;
+            display: grid;
+            gap: 0.625rem;
+            padding-right: 0.25rem;
+        }
+        button.list-popup-trigger,
+        .list-popup-trigger {
+            cursor: pointer !important;
+            border: none !important;
+            text-align: left !important;
+            font: inherit;
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            box-sizing: border-box !important;
+            transition: filter 0.15s ease, transform 0.15s ease;
+        }
+        .list-popup-trigger:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+        .list-popup-trigger:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .list-popup-trigger .contact-count-action {
+            margin-left: auto;
+            font-size: 0.75rem;
+            font-weight: 600;
+            opacity: 0.85;
+        }
+
+        /* --- INSTAGRAM SYNC BUTTON (within modal) --- */
+        button.modal-sync-ig-btn,
+        .modal-sync-ig-btn {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            width: 100% !important;
+            padding: 0.625rem 1rem !important;
+            border-radius: 0.5rem !important;
+            font-size: 0.875rem !important;
+            font-weight: 700 !important;
+            color: #fff !important;
+            background: linear-gradient(135deg, #833AB4 0%, #E1306C 70%, #F77737 100%) !important;
+            border: 1px solid transparent !important;
+            cursor: pointer !important;
+            transition: filter 0.15s, transform 0.15s !important;
+            font-family: inherit !important;
+            box-sizing: border-box !important;
+            line-height: 1.2 !important;
+        }
+        .modal-sync-ig-btn:hover:not(:disabled) {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+        .modal-sync-ig-btn:disabled {
+            cursor: not-allowed !important;
+            opacity: 0.55 !important;
+        }
+        .modal-sync-ig-btn svg,
+        .modal-sync-ig-btn .sync-ig-icon {
+            width: 16px !important;
+            height: 16px !important;
+            flex-shrink: 0 !important;
+        }
+        .modal-sync-ig-btn.syncing {
+            pointer-events: none;
+            opacity: 0.85;
+        }
+        .modal-sync-ig-btn.syncing .sync-ig-icon {
+            animation: sync-spin 0.9s linear infinite;
+        }
+        .modal-sync-ig-hint {
+            color: #9ca3af;
+            font-size: 0.75rem;
+            margin: 0.5rem 0 0;
+            line-height: 1.4;
         }
         .contact-count-toggle {
             width: 100%;
