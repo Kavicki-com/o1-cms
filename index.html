@@ -430,6 +430,7 @@
                                 <h4>Basic Information</h4>
                                 <p><span>City:</span> <span>${app.city || 'Not specified'}</span></p>
                                 <p><span>Phone:</span> <span>${app.phone_country_code && app.phone_number ? `${app.phone_country_code} ${app.phone_number}` : 'Not specified'}</span></p>
+                                <p><span>Invited by:</span> <span>${app.invited_by ? escapeHTML(app.invited_by) : 'Not specified'}</span></p>
                                 <p><span>Submitted:</span> <span>${new Date(app.created_at).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}</span></p>
                             </div>
                              <div class="modal-section">
